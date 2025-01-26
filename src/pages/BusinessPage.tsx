@@ -179,7 +179,7 @@ const BusinessPage = () => {
                 {business.booking_links && (
                   <Button 
                     className="w-full mb-4 flex items-center gap-2"
-                    onClick={() => window.open(business.booking_links, '_blank')}
+                    onClick={() => window.open(`${business.booking_links}?utm_source=tattoobooker&utm_medium=referral&utm_campaign=collab-with-me`, '_blank', 'referrerpolicy=origin')}
                   >
                     <Calendar className="w-4 h-4" />
                     {t('business.bookAppointment')}
@@ -199,7 +199,7 @@ const BusinessPage = () => {
                   
                   {business.website && (
                     <a 
-                      href={business.website}
+                      href={`${business.website}?utm_source=tattoobooker&utm_medium=referral&utm_campaign=collab-with-me`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors"
@@ -211,7 +211,7 @@ const BusinessPage = () => {
                   
                   {business.instagram && (
                     <a 
-                      href={`https://instagram.com/${business.instagram.replace('@', '')}`}
+                      href={`https://instagram.com/${business.instagram.replace('@', '')}?utm_source=tattoobooker&utm_medium=referral&utm_campaign=collab-with-me`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors"

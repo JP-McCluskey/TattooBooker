@@ -91,7 +91,7 @@ const BusinessCard: React.FC<BusinessCardProps> = ({ business }) => {
               
               {business.website && (
                 <a 
-                  href={business.website}
+                  href={`${business.website}?utm_source=tattoobooker&utm_medium=referral&utm_campaign=collab-with-me`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
@@ -104,7 +104,7 @@ const BusinessCard: React.FC<BusinessCardProps> = ({ business }) => {
               
               {business.instagram && (
                 <a 
-                  href={`https://instagram.com/${business.instagram.replace('@', '')}`}
+                  href={`https://instagram.com/${business.instagram.replace('@', '')}?utm_source=tattoobooker&utm_medium=referral&utm_campaign=collab-with-me`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
@@ -123,7 +123,7 @@ const BusinessCard: React.FC<BusinessCardProps> = ({ business }) => {
                   className="flex items-center gap-2"
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(business.booking_links, '_blank');
+                    window.open(`${business.booking_links}?utm_source=tattoobooker&utm_medium=referral&utm_campaign=collab-with-me`, '_blank', 'referrerpolicy=origin');
                   }}
                 >
                   <Calendar className="w-4 h-4" />

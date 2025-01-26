@@ -15,6 +15,8 @@ const BusinessList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const [currentSearchTerm, setCurrentSearchTerm] = useState('');
+  const [currentCity, setCurrentCity] = useState('');
 
   const fetchBusinesses = async (searchTerm = '', selectedCity = '', page = 0) => {
     try {
@@ -38,10 +40,13 @@ const BusinessList: React.FC = () => {
       if (countError) throw countError;
       setTotalCount(count || 0);
 
-      // Then fetch the actual data
+      // Then fetch the actual data, prioritizing businesses with booking links
       let query = supabase
         .from('businesses')
         .select('*')
+        // First, order by whether booking_links is not null (true comes first)
+        .order('booking_links', { ascending: true, nullsLast: true })
+        // Then order by rating within each group (businesses with/without booking links)
         .order('total_score', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
@@ -71,6 +76,8 @@ const BusinessList: React.FC = () => {
   }, []);
 
   const handleSearch = (searchTerm: string, selectedCity: string) => {
+    setCurrentSearchTerm(searchTerm);
+    setCurrentCity(selectedCity);
     setCurrentPage(0);
     fetchBusinesses(searchTerm, selectedCity, 0);
   };
@@ -78,7 +85,7 @@ const BusinessList: React.FC = () => {
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    fetchBusinesses('', '', newPage);
+    fetchBusinesses(currentSearchTerm, currentCity, newPage);
   };
 
   if (error) {
