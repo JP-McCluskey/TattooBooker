@@ -8,17 +8,7 @@ import Navbar from '../components/Navbar';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -26,23 +16,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Heart, Bookmark, Loader2 } from "lucide-react";
+import { Heart, Bookmark, Loader2, Search } from "lucide-react";
 
 const PLACEMENT_OPTIONS = [
-  'Wrist',
-  'Forearm - Inner',
-  'Forearm - Outer',
-  'Upper Arm',
-  'Shoulder',
+  'Arm - Upper',
+  'Arm - Lower',
+  'Leg - Upper',
+  'Leg - Lower',
   'Chest',
   'Back - Upper',
   'Back - Lower',
+  'Neck',
+  'Hand',
+  'Foot',
   'Ribs',
   'Hip',
-  'Thigh',
-  'Leg - Calf',
-  'Ankle',
-  'Foot',
+  'Head',
+  'Face',
 ];
 
 const STYLE_OPTIONS: TattooStyle[] = [
@@ -67,24 +57,15 @@ const STYLE_OPTIONS: TattooStyle[] = [
   'Lettering',
 ];
 
-interface ExtendedTattooImage extends TattooImage {
-  isLiked?: boolean;
-  isFavorited?: boolean;
-}
-
 const Explore = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
   const { user } = useAuth();
-  const [images, setImages] = useState<ExtendedTattooImage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPlacement, setSelectedPlacement] = useState<string>('all');
-  const [selectedStyle, setSelectedStyle] = useState<string>('all');
-  const [processingAction, setProcessingAction] = useState<{
-    imageId: string;
-    action: 'like' | 'favorite';
-  } | null>(null);
+  const [images, setImages] = useState<TattooImage[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPlacement, setSelectedPlacement] = useState('all');
+  const [selectedStyle, setSelectedStyle] = useState('all');
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -94,10 +75,14 @@ const Explore = () => {
           .from('tattoo_images')
           .select(`
             *,
-            user_tattoo_likes!inner(user_id),
-            user_tattoo_favorites!inner(user_id)
+            user_tattoo_likes (user_id),
+            user_tattoo_favorites (user_id)
           `)
           .order('created_at', { ascending: false });
+
+        if (searchTerm) {
+          query = query.ilike('title', `%${searchTerm}%`);
+        }
 
         if (selectedPlacement !== 'all') {
           query = query.eq('placement', selectedPlacement);
@@ -126,59 +111,65 @@ const Explore = () => {
     };
 
     fetchImages();
-  }, [selectedPlacement, selectedStyle, user]);
+  }, [selectedPlacement, selectedStyle, searchTerm, user]);
 
   const handleLike = async (imageId: string) => {
-    if (!user) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
 
     try {
-      setProcessingAction({ imageId, action: 'like' });
-      const { data: liked, error } = await supabase
+      const { data, error } = await supabase
         .rpc('toggle_tattoo_like', { p_tattoo_id: imageId });
 
       if (error) throw error;
 
-      setImages(prev => prev.map(image => {
-        if (image.id === imageId) {
-          return {
-            ...image,
-            likes_count: liked ? image.likes_count + 1 : image.likes_count - 1,
-            isLiked: liked,
-          };
-        }
-        return image;
-      }));
+      setImages(prevImages => 
+        prevImages.map(image => 
+          image.id === imageId
+            ? {
+                ...image,
+                isLiked: data,
+                likes_count: data 
+                  ? image.likes_count + 1 
+                  : image.likes_count - 1
+              }
+            : image
+        )
+      );
     } catch (err) {
-      console.error('Error toggling like:', err);
-    } finally {
-      setProcessingAction(null);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
   const handleFavorite = async (imageId: string) => {
-    if (!user) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
 
     try {
-      setProcessingAction({ imageId, action: 'favorite' });
-      const { data: favorited, error } = await supabase
+      const { data, error } = await supabase
         .rpc('toggle_tattoo_favorite', { p_tattoo_id: imageId });
 
       if (error) throw error;
 
-      setImages(prev => prev.map(image => {
-        if (image.id === imageId) {
-          return {
-            ...image,
-            favorites_count: favorited ? image.favorites_count + 1 : image.favorites_count - 1,
-            isFavorited: favorited,
-          };
-        }
-        return image;
-      }));
+      setImages(prevImages => 
+        prevImages.map(image => 
+          image.id === imageId
+            ? {
+                ...image,
+                isFavorited: data,
+                favorites_count: data 
+                  ? image.favorites_count + 1 
+                  : image.favorites_count - 1
+              }
+            : image
+        )
+      );
     } catch (err) {
-      console.error('Error toggling favorite:', err);
-    } finally {
-      setProcessingAction(null);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
@@ -190,12 +181,23 @@ const Explore = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <h1 className="text-3xl font-bold">Explore Tattoos</h1>
           
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 w-full md:w-auto">
+            <div className="relative w-full md:w-64">
+              <Input
+                type="text"
+                placeholder="Search by title..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
+
             <Select
               value={selectedPlacement}
               onValueChange={setSelectedPlacement}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filter by placement" />
               </SelectTrigger>
               <SelectContent>
@@ -212,7 +214,7 @@ const Explore = () => {
               value={selectedStyle}
               onValueChange={setSelectedStyle}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filter by style" />
               </SelectTrigger>
               <SelectContent>
@@ -228,143 +230,63 @@ const Explore = () => {
         </div>
 
         {error && (
-          <div className="text-center text-destructive mb-8">
+          <div className="p-3 mb-6 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded-md">
             {error}
           </div>
         )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : images.length === 0 ? (
-          <div className="text-center text-muted-foreground py-12">
-            No tattoos found
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {images.map((image) => (
-              <Card
-                key={image.id}
-                className="overflow-hidden group cursor-pointer hover:shadow-lg transition-shadow"
-              >
-                <div className="relative">
-                  <img
-                    src={image.image_url}
-                    alt={`Tattoo ${image.placement}`}
-                    className="w-full aspect-square object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                    {user ? (
-                      <>
-                        <Button
-                          variant={image.isLiked ? "default" : "secondary"}
-                          size="icon"
-                          className="h-10 w-10"
-                          disabled={processingAction?.imageId === image.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLike(image.id);
-                          }}
-                        >
-                          {processingAction?.imageId === image.id && 
-                           processingAction?.action === 'like' ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <Heart 
-                              className={`h-5 w-5 ${image.isLiked ? 'fill-current' : ''}`} 
-                            />
-                          )}
-                        </Button>
-                        <Button
-                          variant={image.isFavorited ? "default" : "secondary"}
-                          size="icon"
-                          className="h-10 w-10"
-                          disabled={processingAction?.imageId === image.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFavorite(image.id);
-                          }}
-                        >
-                          {processingAction?.imageId === image.id && 
-                           processingAction?.action === 'favorite' ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <Bookmark 
-                              className={`h-5 w-5 ${image.isFavorited ? 'fill-current' : ''}`} 
-                            />
-                          )}
-                        </Button>
-                      </>
-                    ) : (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <div className="flex gap-4">
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              className="h-10 w-10"
-                            >
-                              <Heart className="h-5 w-5" />
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              className="h-10 w-10"
-                            >
-                              <Bookmark className="h-5 w-5" />
-                            </Button>
-                          </div>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Sign in required</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              You need to be signed in to like or favorite tattoos.
-                              Would you like to sign in now?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => navigate('/login')}>
-                              Sign In
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading ? (
+            <div className="col-span-full flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : images.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-muted-foreground">
+              No tattoos found
+            </div>
+          ) : (
+            images.map(image => (
+              <Card key={image.id} className="overflow-hidden">
+                <img
+                  src={image.image_url}
+                  alt={image.title || 'Tattoo'}
+                  className="w-full h-48 object-cover"
+                />
                 <div className="p-4">
+                  {image.title && (
+                    <h3 className="text-lg font-semibold mb-2">{image.title}</h3>
+                  )}
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium">{image.placement}</span>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleLike(image.id)}
+                        className="flex items-center gap-1 hover:text-primary transition-colors"
+                      >
                         <Heart className={`w-4 h-4 ${image.isLiked ? 'fill-primary text-primary' : ''}`} />
                         {image.likes_count}
-                      </span>
-                      <span className="flex items-center gap-1">
+                      </button>
+                      <button
+                        onClick={() => handleFavorite(image.id)}
+                        className="flex items-center gap-1 hover:text-primary transition-colors"
+                      >
                         <Bookmark className={`w-4 h-4 ${image.isFavorited ? 'fill-primary text-primary' : ''}`} />
                         {image.favorites_count}
-                      </span>
+                      </button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {image.styles.map((style, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="text-xs"
-                      >
+                    {image.styles.map(style => (
+                      <Badge key={style} variant="secondary">
                         {style}
                       </Badge>
                     ))}
                   </div>
                 </div>
               </Card>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </main>
     </div>
   );

@@ -24,6 +24,7 @@ export interface TattooImage {
   user_id?: string;
   artist_id?: string;
   business_id?: number;
+  title?: string;
   placement: string;
   styles: TattooStyle[];
   likes_count: number;

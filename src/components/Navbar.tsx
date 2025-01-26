@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Globe, Menu, X, Settings, Search } from "lucide-react";
+import { Moon, Sun, Globe, Menu, X, Settings, Search, User } from "lucide-react";
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -15,7 +15,6 @@ const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -29,7 +28,6 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close mobile menu when route changes
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
@@ -56,7 +54,6 @@ const Navbar: React.FC = () => {
   return (
     <nav className="border-b bg-background relative z-50">
       <div className="container mx-auto px-4 h-16 flex justify-between items-center">
-        {/* Logo/Title */}
         <div 
           className="text-xl font-bold cursor-pointer text-foreground hover:text-primary transition-colors"
           onClick={() => handleNavigate('/')}
@@ -64,7 +61,6 @@ const Navbar: React.FC = () => {
           {t('navbar.title')}
         </div>
 
-        {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center space-x-4">
           <Button
             variant="ghost"
@@ -77,15 +73,26 @@ const Navbar: React.FC = () => {
 
           <div className="flex items-center space-x-2">
             {user && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleNavigate('/settings')}
-                title="Settings"
-                className="text-foreground hover:text-primary hover:bg-primary/10"
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleNavigate('/account')}
+                  title="Account"
+                  className="text-foreground hover:text-primary hover:bg-primary/10"
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleNavigate('/settings')}
+                  title="Settings"
+                  className="text-foreground hover:text-primary hover:bg-primary/10"
+                >
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </>
             )}
 
             <Button
@@ -133,7 +140,6 @@ const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Menu Button */}
         <button
           className="lg:hidden text-foreground hover:text-primary p-2 focus:outline-none"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -148,7 +154,6 @@ const Navbar: React.FC = () => {
         </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
       {isMobile && (
         <div
           className={`lg:hidden absolute top-16 inset-x-0 bg-background border-b shadow-lg transform transition-all duration-200 ease-in-out ${
@@ -168,14 +173,24 @@ const Navbar: React.FC = () => {
             </Button>
 
             {user && (
-              <Button
-                variant="outline"
-                onClick={() => handleNavigate('/settings')}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleNavigate('/account')}
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  <User className="h-4 w-4" />
+                  Account
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleNavigate('/settings')}
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Button>
+              </>
             )}
 
             <div className="flex justify-center space-x-4">

@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import Settings from './pages/Settings';
 import BusinessPage from './pages/BusinessPage';
 import Explore from './pages/Explore';
+import Account from './pages/Account';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/business/:id" element={<BusinessPage />} />
                 <Route path="/explore" element={<Explore />} />
+                <Route path="/account" element={<Account />} />
               </Routes>
             </Router>
           </LocationProvider>
