@@ -19,61 +19,143 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        ensureUserProfile(session.user);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
     // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        await ensureUserProfile(session.user);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, userData: any) => {
-    const { data: { user }, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) throw error;
-
-    if (user) {
-      // Create profile
-      const { error: profileError } = await supabase
+  const ensureUserProfile = async (user: User) => {
+    try {
+      // Check if profile exists
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .insert([
-          {
-            id: user.id,
-            full_name: `${userData.firstName} ${userData.lastName}`,
-            phone: userData.phone,
-            address: userData.address,
-          }
-        ]);
-
-      if (profileError) throw profileError;
-
-      // Assign default user role
-      const { data: roleData } = await supabase
-        .from('roles')
-        .select('id')
-        .eq('name', 'user')
+        .select('*')
+        .eq('id', user.id)
         .single();
 
-      if (roleData) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
+      if (profileError && profileError.code !== 'PGRST116') {
+        throw profileError;
+      }
+
+      // If profile doesn't exist, create it
+      if (!profile) {
+        const { error: insertError } = await supabase
+          .from('profiles')
           .insert([
             {
-              user_id: user.id,
-              role_id: roleData.id
+              id: user.id,
+              full_name: user.user_metadata.full_name || '',
+              avatar_url: user.user_metadata.avatar_url || '',
             }
           ]);
 
-        if (roleError) throw roleError;
+        if (insertError) throw insertError;
       }
+
+      // Check if user has a role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (roleError && roleError.code !== 'PGRST116') {
+        throw roleError;
+      }
+
+      // If no role exists, assign default user role
+      if (!roleData) {
+        const { data: defaultRole } = await supabase
+          .from('roles')
+          .select('id')
+          .eq('name', 'user')
+          .single();
+
+        if (defaultRole) {
+          await supabase
+            .from('user_roles')
+            .insert([
+              {
+                user_id: user.id,
+                role_id: defaultRole.id
+              }
+            ]);
+        }
+      }
+    } catch (error) {
+      console.error('Error ensuring user profile:', error);
+    }
+  };
+
+  const signUp = async (email: string, password: string, userData: any) => {
+    const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          full_name: `${userData.firstName} ${userData.lastName}`,
+          is_artist: userData.is_artist || false,
+        }
+      }
+    });
+
+    if (signUpError) throw signUpError;
+    if (!user) throw new Error('No user returned after signup');
+
+    // Create profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert([
+        {
+          id: user.id,
+          full_name: `${userData.firstName} ${userData.lastName}`,
+          phone: userData.phone,
+          address: userData.address,
+          bio: userData.bio || '',
+          avatar_url: userData.avatar_url || '',
+        }
+      ]);
+
+    if (profileError) throw profileError;
+
+    // Get appropriate role
+    const { data: roleData } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', userData.is_artist ? 'artist' : 'user')
+      .single();
+
+    if (roleData) {
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert([
+          {
+            user_id: user.id,
+            role_id: roleData.id
+          }
+        ]);
+
+      if (roleError) throw roleError;
     }
   };
 

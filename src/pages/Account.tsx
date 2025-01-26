@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { TattooImage, TattooStyle } from '../types/tattoo';
+import { TattooStyle } from '../types/tattoo';
 import Navbar from '../components/Navbar';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -14,73 +15,45 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Heart, Bookmark, Upload, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
-const PLACEMENT_OPTIONS = [
-  'Arm - Upper',
-  'Arm - Lower',
-  'Leg - Upper',
-  'Leg - Lower',
-  'Chest',
-  'Back - Upper',
-  'Back - Lower',
-  'Neck',
-  'Hand',
-  'Foot',
-  'Ribs',
-  'Hip',
-  'Head',
-  'Face',
-];
-
-const STYLE_OPTIONS: TattooStyle[] = [
-  'Tebori',
-  'Botanical',
-  'Portraiture',
-  'Sketch',
-  'Maori',
-  'Colored Realism',
-  'Calligraphy',
-  'Black & Grey',
-  'Micro Realism',
-  'Minimal',
-  'Fineline',
-  'Illustrative',
-  'Realism',
-  'Abstract',
-  'Asian',
-  'Geometric',
-  'Blackwork',
-  'Dotwork',
-  'Lettering',
-];
-
-const Account = () => {
+const Account: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('liked');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [likedImages, setLikedImages] = useState<TattooImage[]>([]);
-  const [favoritedImages, setFavoritedImages] = useState<TattooImage[]>([]);
-  const [uploadForm, setUploadForm] = useState({
-    image: null as File | null,
-    title: '',
-    placement: '',
+  const [isArtist, setIsArtist] = useState(false);
+
+  // Update the initial state for profileData and artistData
+  const [profileData, setProfileData] = useState({
+    full_name: '',
+    phone: '',
+    address: '',
+    bio: '',
+    avatar_url: '',
+  });
+
+  const [artistData, setArtistData] = useState({
+    specialties: [] as TattooStyle[],
     styles: [] as TattooStyle[],
+    hourly_rate: '',
+    minimum_charge: '',
+    currency: 'USD',
+    website: '',
+    booking_link: '',
+    facebook: '',
+    instagram: '',
+    pinterest: '',
+    certificates: [] as string[],
+    profile_image_url: '',
+    cover_image_url: '',
+    street: '',
+    building: '',
+    floor: '',
+    city: '',
+    state: '',
+    country: '',
+    postal_code: '',
   });
 
   useEffect(() => {
@@ -89,27 +62,78 @@ const Account = () => {
       return;
     }
 
-    const fetchUserImages = async () => {
+    const fetchUserData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch liked images
-        const { data: likedData, error: likedError } = await supabase
-          .from('tattoo_images')
-          .select('*, user_tattoo_likes!inner(*)')
-          .eq('user_tattoo_likes.user_id', user.id);
 
-        if (likedError) throw likedError;
-        setLikedImages(likedData || []);
+        // Check if user is an artist - modified to handle no roles
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('roles(name)')
+          .eq('user_id', user.id);
 
-        // Fetch favorited images
-        const { data: favoritedData, error: favoritedError } = await supabase
-          .from('tattoo_images')
-          .select('*, user_tattoo_favorites!inner(*)')
-          .eq('user_tattoo_favorites.user_id', user.id);
+        if (roleError) throw roleError;
 
-        if (favoritedError) throw favoritedError;
-        setFavoritedImages(favoritedData || []);
+        // Check if any of the user's roles is 'artist'
+        const isArtistUser = roleData?.some(role => role.roles?.name === 'artist') || false;
+        setIsArtist(isArtistUser);
+
+        // Fetch profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        if (profileData) {
+          setProfileData({
+            full_name: profileData.full_name || '',
+            phone: profileData.phone || '',
+            address: profileData.address || '',
+            bio: profileData.bio || '',
+            avatar_url: profileData.avatar_url || '',
+          });
+        }
+
+        // If artist, fetch artist data
+        if (isArtistUser) {
+          const { data: artistData, error: artistError } = await supabase
+            .from('artists')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (artistError && artistError.code !== 'PGRST116') {
+            // Only throw if it's not a "no rows returned" error
+            throw artistError;
+          }
+          
+          if (artistData) {
+            setArtistData({
+              specialties: artistData.specialties || [],
+              styles: artistData.styles || [],
+              hourly_rate: artistData.hourly_rate?.toString() || '',
+              minimum_charge: artistData.minimum_charge?.toString() || '',
+              currency: artistData.currency || 'USD',
+              website: artistData.website || '',
+              booking_link: artistData.booking_link || '',
+              facebook: artistData.facebook || '',
+              instagram: artistData.instagram || '',
+              pinterest: artistData.pinterest || '',
+              certificates: artistData.certificates || [],
+              profile_image_url: artistData.profile_image_url || '',
+              cover_image_url: artistData.cover_image_url || '',
+              street: artistData.street || '',
+              building: artistData.building || '',
+              floor: artistData.floor || '',
+              city: artistData.city || '',
+              state: artistData.state || '',
+              country: artistData.country || '',
+              postal_code: artistData.postal_code || '',
+            });
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -117,72 +141,66 @@ const Account = () => {
       }
     };
 
-    fetchUserImages();
+    fetchUserData();
   }, [user, navigate]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadForm(prev => ({
-        ...prev,
-        image: e.target.files![0]
-      }));
-    }
-  };
-
-  const handleImageUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !uploadForm.image) return;
-
+  const handleUpdateProfile = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Upload image to storage
-      const fileExt = uploadForm.image.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profileData.full_name,
+          phone: profileData.phone,
+          address: profileData.address,
+          bio: profileData.bio,
+          avatar_url: profileData.avatar_url,
+        })
+        .eq('id', user?.id);
 
-      const { error: uploadError, data } = await supabase.storage
-        .from('images')
-        .upload(filePath, uploadForm.image);
+      if (profileError) throw profileError;
 
-      if (uploadError) throw uploadError;
+      // If artist, update artist data
+      if (isArtist) {
+        const { error: artistError } = await supabase
+          .from('artists')
+          .update({
+            specialties: artistData.specialties,
+            styles: artistData.styles,
+            hourly_rate: artistData.hourly_rate ? parseFloat(artistData.hourly_rate) : null,
+            minimum_charge: artistData.minimum_charge ? parseFloat(artistData.minimum_charge) : null,
+            currency: artistData.currency,
+            website: artistData.website,
+            booking_link: artistData.booking_link,
+            facebook: artistData.facebook,
+            instagram: artistData.instagram,
+            pinterest: artistData.pinterest,
+            certificates: artistData.certificates,
+            profile_image_url: artistData.profile_image_url,
+            cover_image_url: artistData.cover_image_url,
+            street: artistData.street,
+            building: artistData.building,
+            floor: artistData.floor,
+            city: artistData.city,
+            state: artistData.state,
+            country: artistData.country,
+            postal_code: artistData.postal_code,
+          })
+          .eq('id', user?.id);
 
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('images')
-        .getPublicUrl(filePath);
-
-      // Create tattoo image record
-      const { error: dbError } = await supabase
-        .from('tattoo_images')
-        .insert({
-          user_id: user.id,
-          title: uploadForm.title,
-          placement: uploadForm.placement,
-          styles: uploadForm.styles,
-          image_url: publicUrl,
-          bucket_url: filePath,
-        });
-
-      if (dbError) throw dbError;
-
-      // Reset form
-      setUploadForm({
-        image: null,
-        title: '',
-        placement: '',
-        styles: [],
-      });
-
-      // Switch to liked tab to show the upload
-      setActiveTab('liked');
+        if (artistError) throw artistError;
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while uploading');
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -191,185 +209,134 @@ const Account = () => {
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">My Account</h1>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList>
-            <TabsTrigger value="liked" className="flex items-center gap-2">
-              <Heart className="w-4 h-4" />
-              Liked
-            </TabsTrigger>
-            <TabsTrigger value="favorited" className="flex items-center gap-2">
-              <Bookmark className="w-4 h-4" />
-              Favorited
-            </TabsTrigger>
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              Upload
-            </TabsTrigger>
-          </TabsList>
+        {error && (
+          <div className="p-3 mb-6 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded-md">
+            {error}
+          </div>
+        )}
 
-          <TabsContent value="liked">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {loading ? (
-                <div className="col-span-full flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : likedImages.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No liked images yet
-                </div>
-              ) : (
-                likedImages.map(image => (
-                  <Card key={image.id} className="overflow-hidden">
-                    <img
-                      src={image.image_url}
-                      alt={image.title || 'Tattoo'}
-                      className="w-full h-48 object-cover"
-                    />
-                    <CardContent className="p-4">
-                      {image.title && (
-                        <h3 className="font-semibold mb-2">{image.title}</h3>
-                      )}
-                      <p className="text-sm text-muted-foreground">{image.placement}</p>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Information</CardTitle>
+            <CardDescription>Update your personal information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                value={profileData.full_name}
+                onChange={(e) => setProfileData(prev => ({ ...prev, full_name: e.target.value }))}
+              />
             </div>
-          </TabsContent>
 
-          <TabsContent value="favorited">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {loading ? (
-                <div className="col-span-full flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : favoritedImages.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No favorited images yet
-                </div>
-              ) : (
-                favoritedImages.map(image => (
-                  <Card key={image.id} className="overflow-hidden">
-                    <img
-                      src={image.image_url}
-                      alt={image.title || 'Tattoo'}
-                      className="w-full h-48 object-cover"
-                    />
-                    <CardContent className="p-4">
-                      {image.title && (
-                        <h3 className="font-semibold mb-2">{image.title}</h3>
-                      )}
-                      <p className="text-sm text-muted-foreground">{image.placement}</p>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={profileData.phone}
+                onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+              />
             </div>
-          </TabsContent>
 
-          <TabsContent value="upload">
-            <Card>
-              <CardHeader>
-                <CardTitle>Upload a Tattoo</CardTitle>
-                <CardDescription>
-                  Share your tattoo with the community
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleImageUpload} className="space-y-6">
-                  {error && (
-                    <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded-md">
-                      {error}
-                    </div>
-                  )}
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                value={profileData.address}
+                onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
+              />
+            </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      value={uploadForm.title}
-                      onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Enter a title for your tattoo"
-                      required
-                    />
-                  </div>
+            <div className="space-y-2">
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                value={profileData.bio}
+                onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+              />
+            </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="image-upload">Image</Label>
-                    <Input
-                      id="image-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      required
-                    />
-                  </div>
+            <Button
+              onClick={handleUpdateProfile}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Profile'
+              )}
+            </Button>
+          </CardContent>
+        </Card>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="placement">Placement</Label>
-                    <Select
-                      value={uploadForm.placement}
-                      onValueChange={(value) => setUploadForm(prev => ({ ...prev, placement: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select placement" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PLACEMENT_OPTIONS.map(placement => (
-                          <SelectItem key={placement} value={placement}>
-                            {placement}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        {isArtist && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Artist Information</CardTitle>
+              <CardDescription>Update your artist profile</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Artist-specific fields */}
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  value={artistData.website}
+                  onChange={(e) => setArtistData(prev => ({ ...prev, website: e.target.value }))}
+                />
+              </div>
 
-                  <div className="space-y-2">
-                    <Label>Styles</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {STYLE_OPTIONS.map(style => (
-                        <Button
-                          key={style}
-                          type="button"
-                          variant={uploadForm.styles.includes(style) ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => {
-                            setUploadForm(prev => ({
-                              ...prev,
-                              styles: prev.styles.includes(style)
-                                ? prev.styles.filter(s => s !== style)
-                                : [...prev.styles, style]
-                            }));
-                          }}
-                        >
-                          {style}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="booking_link">Booking Link</Label>
+                <Input
+                  id="booking_link"
+                  value={artistData.booking_link}
+                  onChange={(e) => setArtistData(prev => ({ ...prev, booking_link: e.target.value }))}
+                />
+              </div>
 
-                  <Button
-                    type="submit"
-                    disabled={loading || !uploadForm.image || !uploadForm.placement || uploadForm.styles.length === 0}
-                    className="w-full"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Tattoo
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hourly_rate">Hourly Rate</Label>
+                  <Input
+                    id="hourly_rate"
+                    type="number"
+                    value={artistData.hourly_rate}
+                    onChange={(e) => setArtistData(prev => ({ ...prev, hourly_rate: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="minimum_charge">Minimum Charge</Label>
+                  <Input
+                    id="minimum_charge"
+                    type="number"
+                    value={artistData.minimum_charge}
+                    onChange={(e) => setArtistData(prev => ({ ...prev, minimum_charge: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handleUpdateProfile}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Artist Profile'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );

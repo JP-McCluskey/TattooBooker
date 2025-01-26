@@ -7,6 +7,7 @@ import { LocationProvider } from './context/LocationContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ArtistRegister from './pages/ArtistRegister';
 import Settings from './pages/Settings';
 import BusinessPage from './pages/BusinessPage';
 import Explore from './pages/Explore';
@@ -23,6 +24,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/artist-register" element={<ArtistRegister />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/business/:id" element={<BusinessPage />} />
                 <Route path="/explore" element={<Explore />} />

@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Globe, Menu, X, Settings, Search, User } from "lucide-react";
+import { Moon, Sun, Globe, Menu, X, Settings, Search, User, Palette } from "lucide-react";
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -71,6 +71,15 @@ const Navbar: React.FC = () => {
             Explore
           </Button>
 
+          <Button
+            variant="ghost"
+            onClick={() => handleNavigate('/artist-register')}
+            className="text-foreground hover:text-primary hover:bg-primary/10"
+          >
+            <Palette className="h-5 w-5 mr-2" />
+            Join as Artist
+          </Button>
+
           <div className="flex items-center space-x-2">
             {user && (
               <>
@@ -124,7 +133,7 @@ const Navbar: React.FC = () => {
             <Button
               variant="outline"
               onClick={handleAuthClick}
-              className="text-foreground hover:text-primary hover:bg-primary/10"
+              className="text-foreground hover:text-primary hover: bg-primary/10"
             >
               {user ? t('navbar.logout') : t('navbar.login')}
             </Button>
@@ -170,6 +179,15 @@ const Navbar: React.FC = () => {
             >
               <Search className="h-4 w-4" />
               Explore
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => handleNavigate('/artist-register')}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <Palette className="h-4 w-4" />
+              Join as Artist
             </Button>
 
             {user && (
