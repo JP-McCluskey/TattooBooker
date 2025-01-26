@@ -49,11 +49,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        throw profileError;
-      }
+      if (profileError) throw profileError;
 
       // If profile doesn't exist, create it
       if (!profile) {
@@ -75,22 +73,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('user_roles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single
 
-      if (roleError && roleError.code !== 'PGRST116') {
-        throw roleError;
-      }
+      if (roleError) throw roleError;
 
       // If no role exists, assign default user role
       if (!roleData) {
-        const { data: defaultRole } = await supabase
+        const { data: defaultRole, error: defaultRoleError } = await supabase
           .from('roles')
           .select('id')
           .eq('name', 'user')
           .single();
 
+        if (defaultRoleError) throw defaultRoleError;
+
         if (defaultRole) {
-          await supabase
+          const { error: insertRoleError } = await supabase
             .from('user_roles')
             .insert([
               {
@@ -98,10 +96,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role_id: defaultRole.id
               }
             ]);
+
+          if (insertRoleError) throw insertRoleError;
         }
       }
     } catch (error) {
-      console.error('Error ensuring user profile:', error);
+      // Only log actual errors, not "no rows returned" messages
+      if (error instanceof Error && !error.message.includes('PGRST116')) {
+        console.error('Error ensuring user profile:', error);
+      }
     }
   };
 
@@ -160,16 +163,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: { session }, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
     if (error) throw error;
+    if (session?.user) {
+      setUser(session.user);
+      await ensureUserProfile(session.user);
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Clear user state immediately
+      setUser(null);
+      
+      // Clear any stored session data
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Force reload the page to clear any cached state
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
   };
 
   return (

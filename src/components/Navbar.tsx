@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { Button } from "@/components/ui/button";
 import { Moon, Sun, Globe, Menu, X, Settings, Search, User, Palette } from "lucide-react";
 
@@ -14,6 +15,7 @@ const Navbar: React.FC = () => {
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isArtist, setIsArtist] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -31,6 +33,30 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
+
+  // Check if user is an artist
+  useEffect(() => {
+    const checkArtistRole = async () => {
+      if (!user) {
+        setIsArtist(false);
+        return;
+      }
+
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('roles(name)')
+          .eq('user_id', user.id);
+
+        setIsArtist(roleData?.some(role => role.roles?.name === 'artist') || false);
+      } catch (error) {
+        console.error('Error checking artist role:', error);
+        setIsArtist(false);
+      }
+    };
+
+    checkArtistRole();
+  }, [user]);
 
   const handleAuthClick = async () => {
     if (user) {
@@ -71,14 +97,17 @@ const Navbar: React.FC = () => {
             Explore
           </Button>
 
-          <Button
-            variant="ghost"
-            onClick={() => handleNavigate('/artist-register')}
-            className="text-foreground hover:text-primary hover:bg-primary/10"
-          >
-            <Palette className="h-5 w-5 mr-2" />
-            Join as Artist
-          </Button>
+          {/* Only show Join as Artist button if user is not logged in or is not an artist */}
+          {(!user || !isArtist) && (
+            <Button
+              variant="ghost"
+              onClick={() => handleNavigate('/artist-register')}
+              className="text-foreground hover:text-primary hover:bg-primary/10"
+            >
+              <Palette className="h-5 w-5 mr-2" />
+              Join as Artist
+            </Button>
+          )}
 
           <div className="flex items-center space-x-2">
             {user && (
@@ -181,14 +210,17 @@ const Navbar: React.FC = () => {
               Explore
             </Button>
 
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigate('/artist-register')}
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <Palette className="h-4 w-4" />
-              Join as Artist
-            </Button>
+            {/* Only show Join as Artist button if user is not logged in or is not an artist */}
+            {(!user || !isArtist) && (
+              <Button
+                variant="ghost"
+                onClick={() => handleNavigate('/artist-register')}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <Palette className="h-4 w-4" />
+                Join as Artist
+              </Button>
+            )}
 
             {user && (
               <>
