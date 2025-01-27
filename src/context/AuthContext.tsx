@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { checkRateLimit } from '../lib/validation';
+
+const RESET_RATE_LIMIT_KEY = 'password_reset_requests';
+const MAX_RESET_ATTEMPTS = 3;
+const RESET_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 interface AuthContextType {
   user: User | null;
@@ -8,6 +13,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData: any) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -285,8 +291,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string) => {
+    // Check rate limiting
+    if (!checkRateLimit(RESET_RATE_LIMIT_KEY, MAX_RESET_ATTEMPTS, RESET_WINDOW_MS)) {
+      throw new Error('Too many reset attempts. Please try again later.');
+    }
+
+    try {
+      // Request password reset
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      // Log the reset request
+      await supabase.from('auth_logs').insert({
+        event: 'password_reset_request',
+        status: 'success',
+        email,
+        ip_address: null, // We can't get this in the browser
+        user_agent: navigator.userAgent
+      });
+
+    } catch (err) {
+      // Log failed attempt
+      await supabase.from('auth_logs').insert({
+        event: 'password_reset_request',
+        status: 'failed',
+        email,
+        error: err instanceof Error ? err.message : 'Unknown error',
+        ip_address: null,
+        user_agent: navigator.userAgent
+      });
+
+      throw err;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      signUp, 
+      signIn, 
+      signOut,
+      resetPassword 
+    }}>
       {children}
     </AuthContext.Provider>
   );

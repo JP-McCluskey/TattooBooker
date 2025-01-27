@@ -12,6 +12,7 @@ import Settings from './pages/Settings';
 import BusinessPage from './pages/BusinessPage';
 import Explore from './pages/Explore';
 import Account from './pages/Account';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
                 <Route path="/business/:id" element={<BusinessPage />} />
                 <Route path="/explore" element={<Explore />} />
                 <Route path="/account" element={<Account />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
               </Routes>
             </Router>
           </LocationProvider>

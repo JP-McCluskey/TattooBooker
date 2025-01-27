@@ -122,6 +122,39 @@ export interface Translations {
     phoneInvalid: string;
     required: string;
   };
+  auth: {
+    signIn: string;
+    signInDescription: string;
+    email: string;
+    emailPlaceholder: string;
+    password: string;
+    passwordPlaceholder: string;
+    rememberMe: string;
+    forgotPassword: string;
+    resetPassword: string;
+    resetDescription: string;
+    securityCode: string;
+    newPassword: string;
+    cancel: string;
+    continue: string;
+    signingIn: string;
+    noAccount: string;
+    register: string;
+    backToSite: string;
+    showPassword: string;
+    hidePassword: string;
+    invalidCredentials: string;
+    tooManyAttempts: string;
+    generalError: string;
+    passwordRequirements: {
+      title: string;
+      length: string;
+      uppercase: string;
+      lowercase: string;
+      number: string;
+      special: string;
+    };
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -246,6 +279,39 @@ export const translations: Record<Language, Translations> = {
       fullNameInvalid: 'Please enter a valid name (minimum 2 letters)',
       phoneInvalid: 'Please enter a valid phone number (e.g., +1234567890)',
       required: 'This field is required'
+    },
+    auth: {
+      signIn: 'Sign In',
+      signInDescription: 'Enter your credentials to access your account',
+      email: 'Email',
+      emailPlaceholder: 'Enter your email',
+      password: 'Password',
+      passwordPlaceholder: 'Enter your password',
+      rememberMe: 'Remember me',
+      forgotPassword: 'Forgot password?',
+      resetPassword: 'Reset Password',
+      resetDescription: 'Enter your email to receive a password reset link',
+      securityCode: 'Security Code',
+      newPassword: 'New Password',
+      cancel: 'Cancel',
+      continue: 'Continue',
+      signingIn: 'Signing in...',
+      noAccount: "Don't have an account?",
+      register: 'Register here',
+      backToSite: 'Back to Site',
+      showPassword: 'Show password',
+      hidePassword: 'Hide password',
+      invalidCredentials: 'Invalid email or password',
+      tooManyAttempts: 'Too many failed attempts. Please try again later.',
+      generalError: 'An error occurred. Please try again.',
+      passwordRequirements: {
+        title: 'Password must contain:',
+        length: 'At least 8 characters',
+        uppercase: 'One uppercase letter',
+        lowercase: 'One lowercase letter',
+        number: 'One number',
+        special: 'One special character'
+      }
     }
   },
   fr: {
@@ -369,6 +435,39 @@ export const translations: Record<Language, Translations> = {
       fullNameInvalid: 'Veuillez entrer un nom valide (minimum 2 lettres)',
       phoneInvalid: 'Veuillez entrer un numéro de téléphone valide (ex: +1234567890)',
       required: 'Ce champ est obligatoire'
+    },
+    auth: {
+      signIn: 'Connexion',
+      signInDescription: 'Entrez vos identifiants pour accéder à votre compte',
+      email: 'Email',
+      emailPlaceholder: 'Entrez votre email',
+      password: 'Mot de passe',
+      passwordPlaceholder: 'Entrez votre mot de passe',
+      rememberMe: 'Se souvenir de moi',
+      forgotPassword: 'Mot de passe oublié ?',
+      resetPassword: 'Réinitialiser le mot de passe',
+      resetDescription: 'Entrez votre email pour recevoir un lien de réinitialisation',
+      securityCode: 'Code de sécurité',
+      newPassword: 'Nouveau mot de passe',
+      cancel: 'Annuler',
+      continue: 'Continuer',
+      signingIn: 'Connexion en cours...',
+      noAccount: "Vous n'avez pas de compte ?",
+      register: 'Inscrivez-vous ici',
+      backToSite: 'Retour au site',
+      showPassword: 'Afficher le mot de passe',
+      hidePassword: 'Masquer le mot de passe',
+      invalidCredentials: 'Email ou mot de passe invalide',
+      tooManyAttempts: 'Trop de tentatives échouées. Veuillez réessayer plus tard.',
+      generalError: 'Une erreur est survenue. Veuillez réessayer.',
+      passwordRequirements: {
+        title: 'Le mot de passe doit contenir :',
+        length: 'Au moins 8 caractères',
+        uppercase: 'Une lettre majuscule',
+        lowercase: 'Une lettre minuscule',
+        number: 'Un chiffre',
+        special: 'Un caractère spécial'
+      }
     }
   }
 };
