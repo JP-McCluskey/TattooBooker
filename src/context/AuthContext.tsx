@@ -17,29 +17,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        ensureUserProfile(session.user);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    let mounted = true;
 
-    // Listen for changes on auth state
+    const initializeAuth = async () => {
+      try {
+        // Check active sessions
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          if (session?.user) {
+            setUser(session.user);
+            await ensureUserProfile(session.user);
+          } else {
+            setUser(null);
+          }
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+      }
+    };
+
+    // Initialize auth state
+    initializeAuth();
+
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        await ensureUserProfile(session.user);
-      } else {
+      if (!mounted) return;
+
+      try {
+        if (session?.user) {
+          setUser(session.user);
+          await ensureUserProfile(session.user);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
         setUser(null);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const ensureUserProfile = async (user: User) => {
@@ -49,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
+        .maybeSingle();
 
       if (profileError) throw profileError;
 
@@ -73,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('user_roles')
         .select('*')
         .eq('user_id', user.id)
-        .maybeSingle(); // Use maybeSingle instead of single
+        .maybeSingle();
 
       if (roleError) throw roleError;
 
@@ -101,7 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (error) {
-      // Only log actual errors, not "no rows returned" messages
       if (error instanceof Error && !error.message.includes('PGRST116')) {
         console.error('Error ensuring user profile:', error);
       }
@@ -109,88 +138,150 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, userData: any) => {
-    const { data: { user }, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          full_name: `${userData.firstName} ${userData.lastName}`,
-          is_artist: userData.is_artist || false,
-        }
-      }
-    });
-
-    if (signUpError) throw signUpError;
-    if (!user) throw new Error('No user returned after signup');
-
-    // Create profile
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert([
-        {
-          id: user.id,
-          full_name: `${userData.firstName} ${userData.lastName}`,
-          phone: userData.phone,
-          address: userData.address,
-          bio: userData.bio || '',
-          avatar_url: userData.avatar_url || '',
-        }
-      ]);
-
-    if (profileError) throw profileError;
-
-    // Get appropriate role
-    const { data: roleData } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', userData.is_artist ? 'artist' : 'user')
-      .single();
-
-    if (roleData) {
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert([
-          {
-            user_id: user.id,
-            role_id: roleData.id
+    try {
+      setLoading(true);
+      
+      // First create the auth user
+      const { data: { user: newUser }, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: userData.firstName,
+            last_name: userData.lastName,
+            full_name: `${userData.firstName} ${userData.lastName}`,
+            is_artist: userData.is_artist || false,
           }
-        ]);
+        }
+      });
 
-      if (roleError) throw roleError;
+      if (signUpError) {
+        if (signUpError.message.includes('User already registered')) {
+          throw new Error('This email is already registered. Please sign in instead.');
+        }
+        throw signUpError;
+      }
+      if (!newUser) throw new Error('No user returned after signup');
+
+      try {
+        // Check if profile already exists
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', newUser.id)
+          .maybeSingle();
+
+        // Only create profile if it doesn't exist
+        if (!existingProfile) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: newUser.id,
+                full_name: `${userData.firstName} ${userData.lastName}`,
+                phone: userData.phone,
+                address: userData.address,
+                bio: userData.bio || '',
+                avatar_url: userData.avatar_url || '',
+              }
+            ]);
+
+          if (profileError) throw profileError;
+        }
+
+        // Get appropriate role
+        const { data: roleData } = await supabase
+          .from('roles')
+          .select('id')
+          .eq('name', userData.is_artist ? 'artist' : 'user')
+          .single();
+
+        if (roleData) {
+          // Check if role already assigned
+          const { data: existingRole } = await supabase
+            .from('user_roles')
+            .select('role_id')
+            .eq('user_id', newUser.id)
+            .maybeSingle();
+
+          if (!existingRole) {
+            const { error: roleError } = await supabase
+              .from('user_roles')
+              .insert([
+                {
+                  user_id: newUser.id,
+                  role_id: roleData.id
+                }
+              ]);
+
+            if (roleError) throw roleError;
+          }
+        }
+      } catch (error) {
+        // If profile/role creation fails, delete the auth user
+        await supabase.auth.admin.deleteUser(newUser.id);
+        throw error;
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data: { session }, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) throw error;
-    if (session?.user) {
-      setUser(session.user);
-      await ensureUserProfile(session.user);
+    try {
+      setLoading(true);
+      const { data: { session }, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password');
+        }
+        throw error;
+      }
+      
+      if (session?.user) {
+        setUser(session.user);
+        await ensureUserProfile(session.user);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
+      setLoading(true);
+
+      // First clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Remove any cookies
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear user state immediately
+      // Clear user state
       setUser(null);
       
-      // Clear any stored session data
-      localStorage.removeItem('supabase.auth.token');
-      
-      // Force reload the page to clear any cached state
+      // Force a complete page reload and redirect to login
       window.location.href = '/login';
     } catch (error) {
       console.error('Error signing out:', error);
-      throw error;
+      
+      // If normal signout fails, force a hard reset
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/login';
+    } finally {
+      setLoading(false);
     }
   };
 

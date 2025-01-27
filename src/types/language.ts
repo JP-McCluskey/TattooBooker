@@ -97,6 +97,31 @@ export interface Translations {
       comingSoon: string;
     };
   };
+  account: {
+    title: string;
+    avatar: {
+      title: string;
+      description: string;
+      upload: string;
+      uploading: string;
+      requirements: string;
+    };
+    profile: {
+      title: string;
+      description: string;
+      fullName: string;
+      phone: string;
+      address: string;
+      bio: string;
+      update: string;
+      updating: string;
+    };
+  };
+  validation: {
+    fullNameInvalid: string;
+    phoneInvalid: string;
+    required: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -196,6 +221,31 @@ export const translations: Record<Language, Translations> = {
         title: 'Business Settings',
         comingSoon: 'Business settings content coming soon...'
       }
+    },
+    account: {
+      title: 'My Account',
+      avatar: {
+        title: 'Profile Picture',
+        description: 'Upload a profile picture to personalize your account',
+        upload: 'Upload Image',
+        uploading: 'Uploading...',
+        requirements: 'JPG, PNG or JPEG (max. 5MB)'
+      },
+      profile: {
+        title: 'Profile Information',
+        description: 'Update your personal information',
+        fullName: 'Full Name',
+        phone: 'Phone Number',
+        address: 'Address',
+        bio: 'Bio',
+        update: 'Update Profile',
+        updating: 'Updating...'
+      }
+    },
+    validation: {
+      fullNameInvalid: 'Please enter a valid name (minimum 2 letters)',
+      phoneInvalid: 'Please enter a valid phone number (e.g., +1234567890)',
+      required: 'This field is required'
     }
   },
   fr: {
@@ -294,6 +344,31 @@ export const translations: Record<Language, Translations> = {
         title: 'Paramètres Entreprise',
         comingSoon: 'Paramètres entreprise bientôt disponibles...'
       }
+    },
+    account: {
+      title: 'Mon Compte',
+      avatar: {
+        title: 'Photo de Profil',
+        description: 'Téléchargez une photo de profil pour personnaliser votre compte',
+        upload: 'Télécharger une Image',
+        uploading: 'Téléchargement...',
+        requirements: 'JPG, PNG ou JPEG (max. 5MB)'
+      },
+      profile: {
+        title: 'Informations du Profil',
+        description: 'Mettez à jour vos informations personnelles',
+        fullName: 'Nom Complet',
+        phone: 'Numéro de Téléphone',
+        address: 'Adresse',
+        bio: 'Biographie',
+        update: 'Mettre à Jour le Profil',
+        updating: 'Mise à Jour...'
+      }
+    },
+    validation: {
+      fullNameInvalid: 'Veuillez entrer un nom valide (minimum 2 lettres)',
+      phoneInvalid: 'Veuillez entrer un numéro de téléphone valide (ex: +1234567890)',
+      required: 'Ce champ est obligatoire'
     }
   }
 };

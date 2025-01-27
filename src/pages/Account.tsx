@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { TattooStyle } from '../types/tattoo';
+import { validateFullName, validatePhone, formatPhoneE164, validateImageFile } from '../lib/validation';
+import { Profile, ProfileFormData, ProfileFormState } from '../types/profile';
 import Navbar from '../components/Navbar';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,46 +17,54 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-const Account: React.FC = () => {
+const Account = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
+  const [loading, setLoading] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isArtist, setIsArtist] = useState(false);
 
-  // Update the initial state for profileData and artistData
-  const [profileData, setProfileData] = useState({
-    full_name: '',
-    phone: '',
-    address: '',
-    bio: '',
-    avatar_url: '',
+  const [formState, setFormState] = useState<ProfileFormState>({
+    data: {
+      full_name: '',
+      phone: '',
+      address: '',
+      bio: '',
+    },
+    isDirty: false,
+    isValid: false,
+    isSubmitting: false,
+    errors: {},
   });
 
-  const [artistData, setArtistData] = useState({
-    specialties: [] as TattooStyle[],
-    styles: [] as TattooStyle[],
-    hourly_rate: '',
-    minimum_charge: '',
-    currency: 'USD',
-    website: '',
-    booking_link: '',
-    facebook: '',
-    instagram: '',
-    pinterest: '',
-    certificates: [] as string[],
-    profile_image_url: '',
-    cover_image_url: '',
-    street: '',
-    building: '',
-    floor: '',
-    city: '',
-    state: '',
-    country: '',
-    postal_code: '',
-  });
+  const validateForm = useCallback((data: ProfileFormData) => {
+    const errors: Partial<Record<keyof ProfileFormData, string>> = {};
+
+    if (!validateFullName(data.full_name)) {
+      errors.full_name = t('validation.fullNameInvalid');
+    }
+
+    if (data.phone && !validatePhone(data.phone)) {
+      errors.phone = t('validation.phoneInvalid');
+    }
+
+    return errors;
+  }, [t]);
 
   useEffect(() => {
     if (!user) {
@@ -62,76 +72,30 @@ const Account: React.FC = () => {
       return;
     }
 
-    const fetchUserData = async () => {
+    const fetchProfile = async () => {
       try {
         setLoading(true);
-
-        // Check if user is an artist - modified to handle no roles
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('roles(name)')
-          .eq('user_id', user.id);
-
-        if (roleError) throw roleError;
-
-        // Check if any of the user's roles is 'artist'
-        const isArtistUser = roleData?.some(role => role.roles?.name === 'artist') || false;
-        setIsArtist(isArtistUser);
-
-        // Fetch profile data
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
 
-        if (profileError) throw profileError;
-        if (profileData) {
-          setProfileData({
-            full_name: profileData.full_name || '',
-            phone: profileData.phone || '',
-            address: profileData.address || '',
-            bio: profileData.bio || '',
-            avatar_url: profileData.avatar_url || '',
-          });
-        }
+        if (error) throw error;
 
-        // If artist, fetch artist data
-        if (isArtistUser) {
-          const { data: artistData, error: artistError } = await supabase
-            .from('artists')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+        if (profile) {
+          setFormState(prev => ({
+            ...prev,
+            data: {
+              full_name: profile.full_name || '',
+              phone: profile.phone || '',
+              address: profile.address || '',
+              bio: profile.bio || '',
+            },
+          }));
 
-          if (artistError && artistError.code !== 'PGRST116') {
-            // Only throw if it's not a "no rows returned" error
-            throw artistError;
-          }
-          
-          if (artistData) {
-            setArtistData({
-              specialties: artistData.specialties || [],
-              styles: artistData.styles || [],
-              hourly_rate: artistData.hourly_rate?.toString() || '',
-              minimum_charge: artistData.minimum_charge?.toString() || '',
-              currency: artistData.currency || 'USD',
-              website: artistData.website || '',
-              booking_link: artistData.booking_link || '',
-              facebook: artistData.facebook || '',
-              instagram: artistData.instagram || '',
-              pinterest: artistData.pinterest || '',
-              certificates: artistData.certificates || [],
-              profile_image_url: artistData.profile_image_url || '',
-              cover_image_url: artistData.cover_image_url || '',
-              street: artistData.street || '',
-              building: artistData.building || '',
-              floor: artistData.floor || '',
-              city: artistData.city || '',
-              state: artistData.state || '',
-              country: artistData.country || '',
-              postal_code: artistData.postal_code || '',
-            });
+          if (profile.avatar_url) {
+            setImagePreview(profile.avatar_url);
           }
         }
       } catch (err) {
@@ -141,62 +105,107 @@ const Account: React.FC = () => {
       }
     };
 
-    fetchUserData();
+    fetchProfile();
   }, [user, navigate]);
 
-  const handleUpdateProfile = async () => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    
+    setFormState(prev => {
+      const newData = { ...prev.data, [name]: value };
+      const errors = validateForm(newData);
+      
+      return {
+        ...prev,
+        data: newData,
+        errors,
+        isDirty: true,
+        isValid: Object.keys(errors).length === 0,
+      };
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return;
+
+    const file = e.target.files[0];
+    const validation = validateImageFile(file);
+
+    if (!validation.isValid) {
+      setError(validation.error);
+      return;
+    }
+
     try {
-      setLoading(true);
+      setUploadingImage(true);
       setError(null);
 
-      // Update profile
-      const { error: profileError } = await supabase
+      // Create a preview
+      const preview = URL.createObjectURL(file);
+      setImagePreview(preview);
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user!.id}/${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user!.id);
+
+      if (updateError) throw updateError;
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setImagePreview(null);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formState.isDirty || !formState.isValid || formState.isSubmitting) {
+      return;
+    }
+
+    try {
+      setFormState(prev => ({ ...prev, isSubmitting: true }));
+      setError(null);
+
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({
-          full_name: profileData.full_name,
-          phone: profileData.phone,
-          address: profileData.address,
-          bio: profileData.bio,
-          avatar_url: profileData.avatar_url,
+          full_name: formState.data.full_name,
+          phone: formState.data.phone ? formatPhoneE164(formState.data.phone) : null,
+          address: formState.data.address || null,
+          bio: formState.data.bio || null,
         })
-        .eq('id', user?.id);
+        .eq('id', user!.id);
 
-      if (profileError) throw profileError;
+      if (updateError) throw updateError;
 
-      // If artist, update artist data
-      if (isArtist) {
-        const { error: artistError } = await supabase
-          .from('artists')
-          .update({
-            specialties: artistData.specialties,
-            styles: artistData.styles,
-            hourly_rate: artistData.hourly_rate ? parseFloat(artistData.hourly_rate) : null,
-            minimum_charge: artistData.minimum_charge ? parseFloat(artistData.minimum_charge) : null,
-            currency: artistData.currency,
-            website: artistData.website,
-            booking_link: artistData.booking_link,
-            facebook: artistData.facebook,
-            instagram: artistData.instagram,
-            pinterest: artistData.pinterest,
-            certificates: artistData.certificates,
-            profile_image_url: artistData.profile_image_url,
-            cover_image_url: artistData.cover_image_url,
-            street: artistData.street,
-            building: artistData.building,
-            floor: artistData.floor,
-            city: artistData.city,
-            state: artistData.state,
-            country: artistData.country,
-            postal_code: artistData.postal_code,
-          })
-          .eq('id', user?.id);
+      setFormState(prev => ({ ...prev, isDirty: false }));
 
-        if (artistError) throw artistError;
-      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
-      setLoading(false);
+      setFormState(prev => ({ ...prev, isSubmitting: false }));
     }
   };
 
@@ -207,7 +216,7 @@ const Account: React.FC = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">My Account</h1>
+        <h1 className="text-3xl font-bold mb-8">{t('account.title')}</h1>
 
         {error && (
           <div className="p-3 mb-6 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded-md">
@@ -215,127 +224,141 @@ const Account: React.FC = () => {
           </div>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Update your personal information</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input
-                id="full_name"
-                value={profileData.full_name}
-                onChange={(e) => setProfileData(prev => ({ ...prev, full_name: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={profileData.phone}
-                onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={profileData.address}
-                onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={profileData.bio}
-                onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-              />
-            </div>
-
-            <Button
-              onClick={handleUpdateProfile}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Profile'
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {isArtist && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>Artist Information</CardTitle>
-              <CardDescription>Update your artist profile</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Artist-specific fields */}
-              <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  value={artistData.website}
-                  onChange={(e) => setArtistData(prev => ({ ...prev, website: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="booking_link">Booking Link</Label>
-                <Input
-                  id="booking_link"
-                  value={artistData.booking_link}
-                  onChange={(e) => setArtistData(prev => ({ ...prev, booking_link: e.target.value }))}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hourly_rate">Hourly Rate</Label>
-                  <Input
-                    id="hourly_rate"
-                    type="number"
-                    value={artistData.hourly_rate}
-                    onChange={(e) => setArtistData(prev => ({ ...prev, hourly_rate: e.target.value }))}
-                  />
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="max-w-2xl">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>{t('account.avatar.title')}</CardTitle>
+                <CardDescription>
+                  {t('account.avatar.description')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-6">
+                  {imagePreview && (
+                    <img
+                      src={imagePreview}
+                      alt={formState.data.full_name}
+                      className="w-24 h-24 rounded-full object-cover"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="avatar"
+                      className="cursor-pointer inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/90"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {uploadingImage ? t('account.avatar.uploading') : t('account.avatar.upload')}
+                    </Label>
+                    <input
+                      id="avatar"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t('account.avatar.requirements')}
+                    </p>
+                  </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="minimum_charge">Minimum Charge</Label>
-                  <Input
-                    id="minimum_charge"
-                    type="number"
-                    value={artistData.minimum_charge}
-                    onChange={(e) => setArtistData(prev => ({ ...prev, minimum_charge: e.target.value }))}
-                  />
-                </div>
-              </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('account.profile.title')}</CardTitle>
+                <CardDescription>
+                  {t('account.profile.description')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="full_name">
+                      {t('account.profile.fullName')}
+                    </Label>
+                    <Input
+                      id="full_name"
+                      name="full_name"
+                      value={formState.data.full_name}
+                      onChange={handleInputChange}
+                      className={formState.errors.full_name ? 'border-destructive' : ''}
+                    />
+                    {formState.errors.full_name && (
+                      <p className="text-sm text-destructive">
+                        {formState.errors.full_name}
+                      </p>
+                    )}
+                  </div>
 
-              <Button
-                onClick={handleUpdateProfile}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  'Update Artist Profile'
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">
+                      {t('account.profile.phone')}
+                    </Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      value={formState.data.phone}
+                      onChange={handleInputChange}
+                      placeholder="+1 (555) 000-0000"
+                      className={formState.errors.phone ? 'border-destructive' : ''}
+                    />
+                    {formState.errors.phone && (
+                      <p className="text-sm text-destructive">
+                        {formState.errors.phone}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">
+                      {t('account.profile.address')}
+                    </Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      value={formState.data.address}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">
+                      {t('account.profile.bio')}
+                    </Label>
+                    <Textarea
+                      id="bio"
+                      name="bio"
+                      value={formState.data.bio}
+                      onChange={handleInputChange}
+                      rows={4}
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={!formState.isDirty || !formState.isValid || formState.isSubmitting}
+                    className="w-full"
+                  >
+                    {formState.isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {t('account.profile.updating')}
+                      </>
+                    ) : (
+                      t('account.profile.update')
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </main>
     </div>
