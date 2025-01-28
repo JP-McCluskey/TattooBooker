@@ -1,5 +1,3 @@
-import { User } from '@supabase/supabase-js';
-
 export interface Profile {
   id: string;
   full_name: string;
@@ -15,6 +13,13 @@ export interface ProfileFormData {
   phone: string;
   address: string;
   bio: string;
+  hourly_rate?: string;
+  minimum_charge?: string;
+  website?: string;
+  booking_link?: string;
+  instagram?: string;
+  facebook?: string;
+  pinterest?: string;
 }
 
 export interface ProfileValidation {
@@ -22,6 +27,10 @@ export interface ProfileValidation {
   phone: boolean;
   address: boolean;
   bio: boolean;
+  website?: boolean;
+  booking_link?: boolean;
+  instagram?: boolean;
+  facebook?: boolean;
 }
 
 export interface ProfileFormState {

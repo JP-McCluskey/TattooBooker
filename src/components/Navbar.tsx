@@ -77,6 +77,9 @@ const Navbar: React.FC = () => {
     setIsMenuOpen(false);
   };
 
+  // Only show "Join as Artist" if user is not logged in or is not already an artist
+  const showJoinAsArtist = !user || !isArtist;
+
   return (
     <nav className="border-b bg-background relative z-50">
       <div className="container mx-auto px-4 h-16 flex justify-between items-center">
@@ -97,8 +100,7 @@ const Navbar: React.FC = () => {
             Explore
           </Button>
 
-          {/* Only show Join as Artist button if user is not logged in or is not an artist */}
-          {(!user || !isArtist) && (
+          {showJoinAsArtist && (
             <Button
               variant="ghost"
               onClick={() => handleNavigate('/artist-register')}
@@ -162,7 +164,7 @@ const Navbar: React.FC = () => {
             <Button
               variant="outline"
               onClick={handleAuthClick}
-              className="text-foreground hover:text-primary hover: bg-primary/10"
+              className="text-foreground hover:text-primary hover:bg-primary/10"
             >
               {user ? t('navbar.logout') : t('navbar.login')}
             </Button>
@@ -210,8 +212,7 @@ const Navbar: React.FC = () => {
               Explore
             </Button>
 
-            {/* Only show Join as Artist button if user is not logged in or is not an artist */}
-            {(!user || !isArtist) && (
+            {showJoinAsArtist && (
               <Button
                 variant="ghost"
                 onClick={() => handleNavigate('/artist-register')}

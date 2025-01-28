@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { validateFullName, validatePhone, formatPhoneE164, validateImageFile } from '../lib/validation';
+import { validateFullName, validatePhone, formatPhoneE164, validateImageFile, validateURL, validateSocialHandle } from '../lib/validation';
 import { Profile, ProfileFormData, ProfileFormState } from '../types/profile';
+import { TattooStyle } from '../types/tattoo';
 import Navbar from '../components/Navbar';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,18 +18,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, Upload } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Loader2, Upload, Eye, EyeOff } from "lucide-react";
+
+const STYLE_OPTIONS: TattooStyle[] = [
+  'Tebori', 'Botanical', 'Portraiture', 'Sketch', 'Maori',
+  'Colored Realism', 'Calligraphy', 'Black & Grey', 'Micro Realism',
+  'Minimal', 'Fineline', 'Illustrative', 'Realism', 'Abstract',
+  'Asian', 'Geometric', 'Blackwork', 'Dotwork', 'Lettering'
+];
 
 const Account = () => {
   const navigate = useNavigate();
@@ -38,6 +35,8 @@ const Account = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isArtist, setIsArtist] = useState(false);
+  const [selectedStyles, setSelectedStyles] = useState<TattooStyle[]>([]);
 
   const [formState, setFormState] = useState<ProfileFormState>({
     data: {
@@ -45,6 +44,13 @@ const Account = () => {
       phone: '',
       address: '',
       bio: '',
+      hourly_rate: '',
+      minimum_charge: '',
+      website: '',
+      booking_link: '',
+      instagram: '',
+      facebook: '',
+      pinterest: '',
     },
     isDirty: false,
     isValid: false,
@@ -63,6 +69,22 @@ const Account = () => {
       errors.phone = t('validation.phoneInvalid');
     }
 
+    if (data.website && !validateURL(data.website)) {
+      errors.website = t('validation.websiteInvalid');
+    }
+
+    if (data.booking_link && !validateURL(data.booking_link)) {
+      errors.booking_link = t('validation.bookingLinkInvalid');
+    }
+
+    if (data.instagram && !validateSocialHandle(data.instagram, 'instagram')) {
+      errors.instagram = t('validation.instagramInvalid');
+    }
+
+    if (data.facebook && !validateSocialHandle(data.facebook, 'facebook')) {
+      errors.facebook = t('validation.facebookInvalid');
+    }
+
     return errors;
   }, [t]);
 
@@ -75,29 +97,65 @@ const Account = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const { data: profile, error } = await supabase
+        
+        // Check if user is an artist
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('roles(name)')
+          .eq('user_id', user.id);
+
+        const artistRole = roleData?.some(role => role.roles?.name === 'artist');
+        setIsArtist(artistRole || false);
+
+        // Fetch profile data
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
 
-        if (error) throw error;
+        if (profileError) throw profileError;
 
-        if (profile) {
-          setFormState(prev => ({
-            ...prev,
-            data: {
-              full_name: profile.full_name || '',
-              phone: profile.phone || '',
-              address: profile.address || '',
-              bio: profile.bio || '',
-            },
-          }));
+        // If artist, fetch artist data
+        let artistData = null;
+        if (artistRole) {
+          const { data: artist, error: artistError } = await supabase
+            .from('artists')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-          if (profile.avatar_url) {
-            setImagePreview(profile.avatar_url);
+          if (artistError && artistError.code !== 'PGRST116') {
+            throw artistError;
           }
+          artistData = artist;
         }
+
+        setFormState(prev => ({
+          ...prev,
+          data: {
+            full_name: profile?.full_name || '',
+            phone: profile?.phone || '',
+            address: profile?.address || '',
+            bio: profile?.bio || '',
+            hourly_rate: artistData?.hourly_rate?.toString() || '',
+            minimum_charge: artistData?.minimum_charge?.toString() || '',
+            website: artistData?.website || '',
+            booking_link: artistData?.booking_link || '',
+            instagram: artistData?.instagram || '',
+            facebook: artistData?.facebook || '',
+            pinterest: artistData?.pinterest || '',
+          },
+        }));
+
+        if (artistData?.styles) {
+          setSelectedStyles(artistData.styles);
+        }
+
+        if (profile?.avatar_url) {
+          setImagePreview(profile.avatar_url);
+        }
+
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -125,6 +183,15 @@ const Account = () => {
         isValid: Object.keys(errors).length === 0,
       };
     });
+  };
+
+  const handleStyleToggle = (style: TattooStyle) => {
+    setSelectedStyles(prev => 
+      prev.includes(style)
+        ? prev.filter(s => s !== style)
+        : [...prev, style]
+    );
+    setFormState(prev => ({ ...prev, isDirty: true }));
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,7 +255,8 @@ const Account = () => {
       setFormState(prev => ({ ...prev, isSubmitting: true }));
       setError(null);
 
-      const { error: updateError } = await supabase
+      // Update profile
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           full_name: formState.data.full_name,
@@ -198,7 +266,26 @@ const Account = () => {
         })
         .eq('id', user!.id);
 
-      if (updateError) throw updateError;
+      if (profileError) throw profileError;
+
+      // If artist, update artist profile
+      if (isArtist) {
+        const { error: artistError } = await supabase
+          .from('artists')
+          .upsert({
+            id: user!.id,
+            styles: selectedStyles,
+            hourly_rate: formState.data.hourly_rate ? parseFloat(formState.data.hourly_rate) : null,
+            minimum_charge: formState.data.minimum_charge ? parseFloat(formState.data.minimum_charge) : null,
+            website: formState.data.website || null,
+            booking_link: formState.data.booking_link || null,
+            instagram: formState.data.instagram || null,
+            facebook: formState.data.facebook || null,
+            pinterest: formState.data.pinterest || null,
+          });
+
+        if (artistError) throw artistError;
+      }
 
       setFormState(prev => ({ ...prev, isDirty: false }));
 
@@ -270,15 +357,15 @@ const Account = () => {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('account.profile.title')}</CardTitle>
-                <CardDescription>
-                  {t('account.profile.description')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('account.profile.title')}</CardTitle>
+                  <CardDescription>
+                    {t('account.profile.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="full_name">
                       {t('account.profile.fullName')}
@@ -340,24 +427,190 @@ const Account = () => {
                       rows={4}
                     />
                   </div>
+                </CardContent>
+              </Card>
 
-                  <Button
-                    type="submit"
-                    disabled={!formState.isDirty || !formState.isValid || formState.isSubmitting}
-                    className="w-full"
-                  >
-                    {formState.isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {t('account.profile.updating')}
-                      </>
-                    ) : (
-                      t('account.profile.update')
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+              {isArtist && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t('account.artist.pricing')}</CardTitle>
+                      <CardDescription>
+                        {t('account.artist.pricingDescription')}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="hourly_rate">
+                            {t('account.artist.hourlyRate')}
+                          </Label>
+                          <Input
+                            id="hourly_rate"
+                            name="hourly_rate"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formState.data.hourly_rate}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="minimum_charge">
+                            {t('account.artist.minimumCharge')}
+                          </Label>
+                          <Input
+                            id="minimum_charge"
+                            name="minimum_charge"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formState.data.minimum_charge}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t('account.artist.styles')}</CardTitle>
+                      <CardDescription>
+                        {t('account.artist.stylesDescription')}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {STYLE_OPTIONS.map(style => (
+                          <Button
+                            key={style}
+                            type="button"
+                            variant={selectedStyles.includes(style) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleStyleToggle(style)}
+                          >
+                            {style}
+                          </Button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t('account.artist.links')}</CardTitle>
+                      <CardDescription>
+                        {t('account.artist.linksDescription')}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="website">
+                          {t('account.artist.website')}
+                        </Label>
+                        <Input
+                          id="website"
+                          name="website"
+                          type="url"
+                          value={formState.data.website}
+                          onChange={handleInputChange}
+                          className={formState.errors.website ? 'border-destructive' : ''}
+                        />
+                        {formState.errors.website && (
+                          <p className="text-sm text-destructive">
+                            {formState.errors.website}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="booking_link">
+                          {t('account.artist.bookingLink')}
+                        </Label>
+                        <Input
+                          id="booking_link"
+                          name="booking_link"
+                          type="url"
+                          value={formState.data.booking_link}
+                          onChange={handleInputChange}
+                          className={formState.errors.booking_link ? 'border-destructive' : ''}
+                        />
+                        {formState.errors.booking_link && (
+                          <p className="text-sm text-destructive">
+                            {formState.errors.booking_link}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="instagram">
+                          {t('account.artist.instagram')}
+                        </Label>
+                        <Input
+                          id="instagram"
+                          name="instagram"
+                          value={formState.data.instagram}
+                          onChange={handleInputChange}
+                          placeholder="@username"
+                          className={formState.errors.instagram ? 'border-destructive' : ''}
+                        />
+                        {formState.errors.instagram && (
+                          <p className="text-sm text-destructive">
+                            {formState.errors.instagram}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="facebook">
+                          {t('account.artist.facebook')}
+                        </Label>
+                        <Input
+                          id="facebook"
+                          name="facebook"
+                          value={formState.data.facebook}
+                          onChange={handleInputChange}
+                          className={formState.errors.facebook ? 'border-destructive' : ''}
+                        />
+                        {formState.errors.facebook && (
+                          <p className="text-sm text-destructive">
+                            {formState.errors.facebook}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="pinterest">
+                          {t('account.artist.pinterest')}
+                        </Label>
+                        <Input
+                          id="pinterest"
+                          name="pinterest"
+                          value={formState.data.pinterest}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              <Button
+                type="submit"
+                disabled={!formState.isDirty || !formState.isValid || formState.isSubmitting}
+                className="w-full"
+              >
+                {formState.isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {t('account.profile.updating')}
+                  </>
+                ) : (
+                  t('account.profile.update')
+                )}
+              </Button>
+            </form>
           </div>
         )}
       </main>
