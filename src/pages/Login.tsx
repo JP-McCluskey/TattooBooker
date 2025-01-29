@@ -5,7 +5,6 @@ import { useLanguage } from '../context/LanguageContext';
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Checkbox } from "../components/ui/checkbox";
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   AlertDialog,
@@ -28,7 +27,6 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -56,15 +54,6 @@ const Login: React.FC = () => {
     try {
       setLoading(true);
       await signIn(formData.email, formData.password);
-      
-      if (rememberMe) {
-        // Store auth token with 30-day expiration
-        const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 30);
-        localStorage.setItem('rememberMe', 'true');
-        localStorage.setItem('rememberMeExpires', expirationDate.toISOString());
-      }
-
       navigate('/');
     } catch (err) {
       setRetryCount(prev => prev + 1);
@@ -118,7 +107,7 @@ const Login: React.FC = () => {
         </div>
         
         {error && (
-          <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded-md" role="alert">
+          <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded-md">
             {error}
           </div>
         )}
@@ -176,21 +165,7 @@ const Login: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remember"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-              />
-              <Label
-                htmlFor="remember"
-                className="text-sm font-normal cursor-pointer"
-              >
-                {t('auth.rememberMe')}
-              </Label>
-            </div>
-
+          <div className="flex justify-end">
             <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
               <AlertDialogTrigger asChild>
                 <Button
