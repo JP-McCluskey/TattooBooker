@@ -60,6 +60,7 @@ const STYLE_OPTIONS: TattooStyle[] = [
 const Explore = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<TattooImage[]>([]);
@@ -179,13 +180,13 @@ const Explore = () => {
       
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <h1 className="text-3xl font-bold">Explore Tattoos</h1>
+          <h1 className="text-foreground text-3xl font-bold">{t('explore.title')}</h1>
           
           <div className="flex flex-wrap gap-4 w-full md:w-auto">
             <div className="relative w-full md:w-64">
               <Input
                 type="text"
-                placeholder="Search by title..."
+                placeholder={t('explore.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -198,10 +199,10 @@ const Explore = () => {
               onValueChange={setSelectedPlacement}
             >
               <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Filter by placement" />
+                <SelectValue placeholder={t('explore.filterByPlacement')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Placements</SelectItem>
+                <SelectItem value="all">{t('explore.allPlacements')}</SelectItem>
                 {PLACEMENT_OPTIONS.map(placement => (
                   <SelectItem key={placement} value={placement}>
                     {placement}
@@ -215,10 +216,10 @@ const Explore = () => {
               onValueChange={setSelectedStyle}
             >
               <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Filter by style" />
+                <SelectValue placeholder={t('explore.filterByStyle')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Styles</SelectItem>
+                <SelectItem value="all">{t('explore.allStyles')}</SelectItem>
                 {STYLE_OPTIONS.map(style => (
                   <SelectItem key={style} value={style}>
                     {style}
@@ -242,7 +243,7 @@ const Explore = () => {
             </div>
           ) : images.length === 0 ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">
-              No tattoos found
+              {t('explore.noResults')}
             </div>
           ) : (
             images.map(image => (
@@ -257,21 +258,21 @@ const Explore = () => {
                     <h3 className="text-lg font-semibold mb-2">{image.title}</h3>
                   )}
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium">{image.placement}</span>
+                    <span className="text-sm font-medium text-foreground">{image.placement}</span>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       <button
                         onClick={() => handleLike(image.id)}
                         className="flex items-center gap-1 hover:text-primary transition-colors"
                       >
                         <Heart className={`w-4 h-4 ${image.isLiked ? 'fill-primary text-primary' : ''}`} />
-                        {image.likes_count}
+                        <span className="text-foreground">{image.likes_count}</span>
                       </button>
                       <button
                         onClick={() => handleFavorite(image.id)}
                         className="flex items-center gap-1 hover:text-primary transition-colors"
                       >
                         <Bookmark className={`w-4 h-4 ${image.isFavorited ? 'fill-primary text-primary' : ''}`} />
-                        {image.favorites_count}
+                        <span className="text-foreground">{image.favorites_count}</span>
                       </button>
                     </div>
                   </div>

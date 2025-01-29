@@ -97,7 +97,7 @@ const Navbar: React.FC = () => {
             className="text-foreground hover:text-primary hover:bg-primary/10"
           >
             <Search className="h-5 w-5 mr-2" />
-            Explore
+            {t('navbar.explore')}
           </Button>
 
           {showJoinAsArtist && (
@@ -202,14 +202,14 @@ const Navbar: React.FC = () => {
               : '-translate-y-full opacity-0 invisible'
           }`}
         >
-          <div className="container mx-auto px-4 py-4 space-y-4">
+          <div className="text-foreground container mx-auto px-4 py-4 space-y-4">
             <Button
               variant="ghost"
               onClick={() => handleNavigate('/explore')}
               className="w-full flex items-center justify-center gap-2"
             >
               <Search className="h-4 w-4" />
-              Explore
+              {t('navbar.explore')}
             </Button>
 
             {showJoinAsArtist && (

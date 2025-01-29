@@ -10,11 +10,23 @@ export interface Translations {
     lightMode: string;
     language: string;
     settings: string;
+    explore: string;
   };
   search: {
     placeholder: string;
     allCities: string;
     button: string;
+  };
+  explore: {
+    title: string;
+    searchPlaceholder: string;
+    filterByPlacement: string;
+    filterByStyle: string;
+    allPlacements: string;
+    allStyles: string;
+    noResults: string;
+    likes: string;
+    favorites: string;
   };
   business: {
     reviews: string;
@@ -161,6 +173,7 @@ export const translations: Record<Language, Translations> = {
   en: {
     navbar: {
       title: 'Tattoo Booker',
+      explore: 'Explore',
       login: 'Login',
       logout: 'Logout',
       register: 'Register',
@@ -173,6 +186,17 @@ export const translations: Record<Language, Translations> = {
       placeholder: 'Search for tattoo shops...',
       allCities: 'All Cities',
       button: 'Search'
+    },
+    explore: {
+      title: 'Explore Tattoos',
+      searchPlaceholder: 'Search by title...',
+      filterByPlacement: 'Filter by placement',
+      filterByStyle: 'Filter by style',
+      allPlacements: 'All Placements',
+      allStyles: 'All Styles',
+      noResults: 'No tattoos found',
+      likes: 'likes',
+      favorites: 'favorites'
     },
     business: {
       reviews: 'reviews',
@@ -317,6 +341,7 @@ export const translations: Record<Language, Translations> = {
   fr: {
     navbar: {
       title: 'Tattoo Booker',
+      explore: 'Explorer',
       login: 'Connexion',
       logout: 'Déconnexion',
       register: 'Inscription',
@@ -329,6 +354,17 @@ export const translations: Record<Language, Translations> = {
       placeholder: 'Rechercher des salons de tatouage...',
       allCities: 'Toutes les villes',
       button: 'Rechercher'
+    },
+    explore: {
+      title: 'Explorer les Tatouages',
+      searchPlaceholder: 'Rechercher par titre...',
+      filterByPlacement: 'Filtrer par emplacement',
+      filterByStyle: 'Filtrer par style',
+      allPlacements: 'Tous les emplacements',
+      allStyles: 'Tous les styles',
+      noResults: 'Aucun tatouage trouvé',
+      likes: 'j\'aime',
+      favorites: 'favoris'
     },
     business: {
       reviews: 'avis',
