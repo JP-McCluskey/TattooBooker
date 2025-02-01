@@ -12,6 +12,7 @@ import Settings from './pages/Settings';
 import BusinessPage from './pages/BusinessPage';
 import Explore from './pages/Explore';
 import Account from './pages/Account';
+import Payment from './pages/Payment';
 import ResetPassword from './pages/ResetPassword';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/business/:id" element={<BusinessPage />} />
                 <Route path="/explore" element={<Explore />} />
                 <Route path="/account" element={<Account />} />
+                <Route path="/payment" element={<Payment />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
               </Routes>
             </Router>
