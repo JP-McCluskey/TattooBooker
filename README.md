@@ -1,8 +1,12 @@
-# 🎨 Tattoo Booker
+# Tattoo Booker
 
 A modern web application that connects tattoo artists with clients, making it easy to discover, book, and manage tattoo appointments.
 
-![Tattoo Booker Screenshot](https://placehold.co/600x400?text=Tattoo+Booker+Screenshot)
+<img width="1028" alt="Screenshot 2025-02-27 at 12 11 45 PM" src="https://github.com/user-attachments/assets/d4d3a70a-833c-4312-83b9-8affe6c2a775" />
+
+## 🌐 Live Demo
+
+Visit the live application at [https://tattoobooker.netlify.app](https://tattoobooker.netlify.app)
 
 ## ✨ Features
 
@@ -19,7 +23,6 @@ A modern web application that connects tattoo artists with clients, making it ea
 - 🎨 Portfolio management
 - 📊 Business profile customization
 - 📅 Appointment management
-- 📈 Analytics and insights
 - 🏷️ Custom tags and categories
 
 ## 🚀 Tech Stack
@@ -30,6 +33,28 @@ A modern web application that connects tattoo artists with clients, making it ea
 - **Authentication**: Supabase Auth
 - **Storage**: Supabase Storage
 - **Deployment**: Netlify
+
+## 🔑 Key Features in Detail
+
+### Search and Discovery
+- Advanced filtering by style and location
+- Geolocation-based studio finder
+
+### User Profiles
+- Secure authentication
+- Profile customization
+- Booking history
+- Favorite designs
+
+### Business Management
+- Studio profile management
+- Artist portfolio showcase
+- Appointment scheduling
+
+### Image Management
+- High-quality image uploads
+- Style tagging
+- Portfolio showcase
 
 ## 🛠️ Installation
 
@@ -67,78 +92,6 @@ A modern web application that connects tattoo artists with clients, making it ea
    npm run dev
    ```
 
-## 🌐 Live Demo
-
-Visit the live application at [https://tattoobooker.netlify.app](https://tattoobooker.netlify.app)
-
-## 📱 Screenshots
-
-### Home Page
-![Home Page](https://placehold.co/600x400?text=Home+Page)
-
-### Explore Page
-![Explore Page](https://placehold.co/600x400?text=Explore+Page)
-
-### Artist Profile
-![Artist Profile](https://placehold.co/600x400?text=Artist+Profile)
-
-## 🔑 Key Features in Detail
-
-### Search and Discovery
-- Advanced filtering by style, location, and price range
-- Real-time search suggestions
-- Geolocation-based studio finder
-
-### User Profiles
-- Secure authentication
-- Profile customization
-- Booking history
-- Favorite artists and designs
-
-### Business Management
-- Studio profile management
-- Artist portfolio showcase
-- Appointment scheduling
-- Business analytics
-
-### Image Management
-- High-quality image uploads
-- Gallery organization
-- Style tagging
-- Portfolio showcase
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👏 Acknowledgments
-
-- [Supabase](https://supabase.com) for the backend infrastructure
-- [shadcn/ui](https://ui.shadcn.com) for the beautiful UI components
-- [Lucide Icons](https://lucide.dev) for the icon set
-- All contributors who have helped shape this project
-
-## 📞 Support
-
-For support, email thetattoobooker@gmail.com 
-
-## 🔮 Roadmap
-
-- [ ] Mobile app development
-- [ ] Real-time chat between artists and clients
-- [ ] Online payment integration
-- [ ] Review and rating system
-- [ ] Artist verification system
-- [ ] Integration with popular calendar apps
-
 ## 💻 Development
 
 ### Prerequisites
@@ -164,5 +117,26 @@ npm run test
 npm run build
 ```
 
-## 🌟 Star Us!
-If you find this project helpful, please consider giving it a star ⭐️ to show your support!
+## 🔮 Roadmap
+
+- [ ] Mobile app development
+- [ ] Real-time chat between artists and clients
+- [ ] Online payment integration
+- [ ] Review and rating system
+- [ ] Artist verification system
+- [ ] Integration with popular calendar apps
+
+## 👏 Acknowledgments
+
+- [Supabase](https://supabase.com) for the backend infrastructure
+- [shadcn/ui](https://ui.shadcn.com) for the beautiful UI components
+- [Lucide Icons](https://lucide.dev) for the icon set
+- All contributors who have helped shape this project
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📞 Support
+
+For support, email thetattoobooker@gmail.com 
